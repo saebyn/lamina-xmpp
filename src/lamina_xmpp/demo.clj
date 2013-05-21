@@ -1,19 +1,18 @@
 (ns lamina-xmpp.demo
   (:gen-class)
   (:require [lamina-xmpp.core :as core])
+  (:require [lamina-xmpp.xmpp :as xmpp])
   (:import [org.jivesoftware.smack
                         Chat ChatManager ConnectionConfiguration MessageListener
                   SASLAuthentication XMPPConnection XMPPException PacketListener]
                [org.jivesoftware.smack.packet
-                            Message Presence Presence$Type Message$Type]
-               [org.jivesoftware.smack.filter MessageTypeFilter]
-               [org.jivesoftware.smack.util StringUtils]))
+                            Message Presence Presence$Type Message$Type]))
 
 (defn -main
   "Application entry point"
   [& [username password destination]]
   (SASLAuthentication/supportSASLMechanism "PLAIN" 0)
-  (let [connection (core/open-connection
+  (let [connection (xmpp/open-connection
                      username
                      password
                      :host "talk.google.com"
