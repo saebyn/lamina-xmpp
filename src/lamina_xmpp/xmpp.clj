@@ -1,5 +1,41 @@
 (ns lamina-xmpp.xmpp
-  (:import [org.jivesoftware.smack XMPPConnection XMPPException ConnectionConfiguration]))
+  (:import [org.jivesoftware.smack
+            XMPPConnection XMPPException ConnectionConfiguration
+            PacketListener])
+  (:import [org.jivesoftware.smack.filter PacketFilter]))
+
+
+(defn packet-listener-proxy
+  [processor]
+  (proxy [PacketListener] []
+    (processPacket [packet]
+      (processor packet))))
+
+
+(defn packet-filter-proxy
+  [processor]
+  (proxy [PacketFilter] []
+    (accept [packet]
+      (processor packet))))
+
+
+(defn add-packet-listener
+  ([connection listener]
+   (.addPacketListener connection listener))
+  ([connection listener packet-filter]
+   (.addPacketListener connection listener packet-filter)))
+
+
+(defn packet-listener
+  ([connection listener]
+    (let [listener-proxy (packet-listener-proxy listener)]
+      (add-packet-listener connection listener-proxy)
+      listener-proxy))
+  ([connection listener packet-filter]
+    (let [listener-proxy (packet-listener-proxy listener)
+          filter-proxy (packet-filter-proxy packet-filter)]
+      (add-packet-listener connection listener-proxy filter-proxy)
+      listener-proxy)))
 
 
 (defn build-configuration

@@ -10,3 +10,18 @@
     (build-connection ..configuration..) => ..connection..
     (connect ..connection..) => nil
     (login ..connection.. ..username.. ..password.. nil) => nil))
+
+
+(fact "Hooks up packet listener"
+  (packet-listener ..connection.. ..callback..) => ..proxy..
+  (provided
+    (packet-listener-proxy ..callback..) => ..proxy..
+    (add-packet-listener ..connection.. ..proxy..) => nil))
+
+
+(fact "Hooks up packet listener with filter"
+  (packet-listener ..connection.. ..callback.. ..filter..) => ..proxy..
+  (provided
+    (packet-listener-proxy ..callback..) => ..proxy..
+    (packet-filter-proxy ..filter..) => ..filter-proxy..
+    (add-packet-listener ..connection.. ..proxy.. ..filter-proxy..) => nil))
