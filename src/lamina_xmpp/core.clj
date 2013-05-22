@@ -20,7 +20,10 @@
   (let [[client server] (channel-pair)]
     ; Process messages from client channel, pass through to connection
     ; Listen for messages from connection, pass through to server channel
-    nil
+    (xmpp/packet-listener connection
+      (fn [packet]
+        (println packet))
+      (xmpp/presence-filter))
     ))
 
 

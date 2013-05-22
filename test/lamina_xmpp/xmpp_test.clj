@@ -15,13 +15,13 @@
 (fact "Hooks up packet listener"
   (packet-listener ..connection.. ..callback..) => ..proxy..
   (provided
-    (packet-listener-proxy ..callback..) => ..proxy..
-    (add-packet-listener ..connection.. ..proxy..) => nil))
+    (#'lamina-xmpp.xmpp/packet-listener-proxy ..callback..) => ..proxy..
+    (#'lamina-xmpp.xmpp/add-packet-listener ..connection.. ..proxy..) => nil))
 
 
 (fact "Hooks up packet listener with filter"
   (packet-listener ..connection.. ..callback.. ..filter..) => ..proxy..
   (provided
-    (packet-listener-proxy ..callback..) => ..proxy..
-    (packet-filter-proxy ..filter..) => ..filter-proxy..
-    (add-packet-listener ..connection.. ..proxy.. ..filter-proxy..) => nil))
+    (#'lamina-xmpp.xmpp/packet-listener-proxy ..callback..) => ..proxy..
+    (#'lamina-xmpp.xmpp/packet-filter-proxy ..filter..) => ..filter-proxy..
+    (#'lamina-xmpp.xmpp/add-packet-listener ..connection.. ..proxy.. ..filter-proxy..) => nil))
