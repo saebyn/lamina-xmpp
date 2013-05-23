@@ -1,6 +1,7 @@
 (ns lamina-xmpp.xmpp-test
   (:use midje.sweet)
-  (:require [lamina-xmpp.xmpp :refer :all]))
+  (:require [lamina-xmpp.xmpp :refer :all]
+            [lamina-xmpp.xmpp.listeners :refer :all]))
 
 
 (fact "Opens a connection"
@@ -15,13 +16,13 @@
 (fact "Hooks up packet listener"
   (packet-listener ..connection.. ..callback..) => ..proxy..
   (provided
-    (#'lamina-xmpp.xmpp/packet-listener-proxy ..callback..) => ..proxy..
-    (#'lamina-xmpp.xmpp/add-packet-listener ..connection.. ..proxy..) => nil))
+    (#'lamina-xmpp.xmpp.listeners/packet-listener-proxy ..callback..) => ..proxy..
+    (#'lamina-xmpp.xmpp.listeners/add-packet-listener ..connection.. ..proxy..) => nil))
 
 
 (fact "Hooks up packet listener with filter"
   (packet-listener ..connection.. ..callback.. ..filter..) => ..proxy..
   (provided
-    (#'lamina-xmpp.xmpp/packet-listener-proxy ..callback..) => ..proxy..
-    (#'lamina-xmpp.xmpp/packet-filter-proxy ..filter..) => ..filter-proxy..
-    (#'lamina-xmpp.xmpp/add-packet-listener ..connection.. ..proxy.. ..filter-proxy..) => nil))
+    (#'lamina-xmpp.xmpp.listeners/packet-listener-proxy ..callback..) => ..proxy..
+    (#'lamina-xmpp.xmpp.listeners/packet-filter-proxy ..filter..) => ..filter-proxy..
+    (#'lamina-xmpp.xmpp.listeners/add-packet-listener ..connection.. ..proxy.. ..filter-proxy..) => nil))

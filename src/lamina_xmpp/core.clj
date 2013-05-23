@@ -1,7 +1,9 @@
 (ns lamina-xmpp.core
   (:require [lamina.executor :refer [task]])
   (:require [lamina.core :refer [channel-pair run-pipeline enqueue]])
-  (:require [lamina-xmpp.xmpp :as xmpp]))
+  (:require [lamina-xmpp.xmpp :as xmpp]
+            [lamina-xmpp.xmpp.presence :as xmpp-presence]
+            [lamina-xmpp.xmpp.listeners :as xmpp-listeners]))
 
 
 (defn get-xmpp-connection
@@ -20,10 +22,10 @@
   (let [[client server] (channel-pair)]
     ; Process messages from client channel, pass through to connection
     ; Listen for messages from connection, pass through to server channel
-    (xmpp/packet-listener connection
+    (xmpp-listeners/packet-listener connection
       (fn [packet]
         (println packet))
-      (xmpp/presence-filter))
+      (xmpp-presence/presence-filter))
     ))
 
 
