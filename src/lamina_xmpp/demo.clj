@@ -19,15 +19,15 @@
                         password
                         :host "talk.google.com"
                         :port 5222
-                        :service-name "gmail.com"))
-        presence (Presence. Presence$Type/available)]
-    (xmpp-presence-client connection)
-    (.sendPacket (get-xmpp-connection connection) presence)
+                        :service-name "gmail.com"))]
+    (push-xmpp-presence connection :available {:status "Test"})
     (let [chat (.createChat (.getChatManager (get-xmpp-connection connection)) destination nil)]
       (try
         (.sendMessage chat "My XMPP chat demo successfully sent an IM to you!")
         (catch XMPPException e
           (println "sendMessage threw exception")
           (throw e))))
-    (Thread/sleep 5000)
+    (Thread/sleep 3000)
+    (push-xmpp-presence connection :away {:status "Hiding"})
+    (Thread/sleep 10000)
     (.disconnect (get-xmpp-connection connection))))

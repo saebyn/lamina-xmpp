@@ -56,3 +56,8 @@
         (println "login threw exception")
         (throw e)))
     connection))
+
+
+(defn send-packet
+  [connection packet]
+  (.sendPacket connection packet))
