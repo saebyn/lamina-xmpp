@@ -1,50 +1,64 @@
 (ns lamina-xmpp.core
   (:require [lamina.executor :refer [task]])
   (:require [lamina.core :refer [channel-pair run-pipeline enqueue close
-                                 receive success-result]])
+                                 receive-all success-result]])
   (:require [lamina-xmpp.xmpp :as xmpp]
-            [lamina-xmpp.xmpp.presence :as xmpp-presence]
-            [lamina-xmpp.xmpp.listeners :as xmpp-listeners]))
+            [lamina-xmpp.xmpp.presence :as presence]
+            [lamina-xmpp.xmpp.listeners :as listeners]))
 
 
 (defn get-xmpp-connection
   "Gets the XMPPConnection instance from the handle yielded by xmpp-client."
-  [connection]
-  connection)
+  [client]
+  client)
 
 
 (defn xmpp-client [& args]
-  "Returns a task that yields the connection to the XMPP server."
+  "Returns a task that yields the client/connection to the XMPP server."
   (task (apply xmpp/open-connection args)))
 
 
-; xmpp-presence: takes a connection and returns a connection for sending and receiving presence data
-;; TODO when the client channel is closed, remove the listener
-;; TODO if the server disconnects or throws an error, propagate it to the channel
-(defn xmpp-presence-client [connection]
+; Takes a XMPP client and returns a client for sending and receiving presence data
+(defn xmpp-presence [xmpp-client]
   (let [[client server] (channel-pair)]
-    ; Process messages from client on server channel, pass through to connection
-    (receive server (fn [presence-message]
-                      (xmpp/send-packet (get-xmpp-connection connection)
-                                        (xmpp-presence/map->presence presence-message))))
-    ; Listen for messages from connection, pass through to server channel
-    (xmpp-listeners/packet-listener connection
-      (fn [packet]
-        (enqueue server (xmpp-presence/presence->map packet)))
-      (xmpp-presence/presence-filter))
+    ; Process messages from client on server channel, pass through to client
+    (receive-all server (fn [presence-message]
+                      (xmpp/send-packet (get-xmpp-connection xmpp-client)
+                                        (presence/map->presence presence-message))))
+    ; Listen for messages from xmpp-client, pass through to server channel
+    (listeners/packet-listener xmpp-client
+                               (fn [packet]
+                                 (enqueue server (presence/presence->map packet)))
+                               (presence/presence-filter))
     (success-result client)))
 
 
+; Takes a XMPP client, and a target JID or conversation ID,
+; returns a client for sending and receiving IMs in a conversation.
+(defn xmpp-conversation
+  ([xmpp-client destination thread]
+   (let [[client server] (channel-pair)
+         ; Listen for messages from xmpp-client, pass through to server channel
+         chat (xmpp/create-chat
+                (get-xmpp-connection xmpp-client)
+                destination
+                thread
+                (fn [chat message]
+                  (enqueue server message)))]
+     ; Process messages from client on server channel, pass through to xmpp-client
+     (receive-all server (fn [message]
+                       (xmpp/send-message chat message)))
+     (success-result client)))
+  ([xmpp-client destination]
+   (xmpp-conversation xmpp-client destination nil)))
+
+
 (defn push-xmpp-presence
-  ([connection presence-type presence-options]
+  ([xmpp-client presence-type presence-options]
    (let [presence-message (merge presence-options {:type presence-type})]
-     (run-pipeline (xmpp-presence-client connection)
-       (fn [ch]
-         (enqueue ch presence-message)
-         (close ch)))))
-  ([connection presence-type]
-   (push-xmpp-presence connection presence-type {})))
-
-
-; xmpp-conversation takes a connection, and a target JID or conversation ID,
-;                   returns a connection for sending and receiving IMs in a conversation
+     (run-pipeline (xmpp-presence xmpp-client)
+                   (fn [ch]
+                     (enqueue ch presence-message)
+                     (close ch)))))
+  ([xmpp-client presence-type]
+   (push-xmpp-presence xmpp-client presence-type {})))

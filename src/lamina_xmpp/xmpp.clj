@@ -1,4 +1,6 @@
 (ns lamina-xmpp.xmpp
+  (:require [lamina-xmpp.xmpp.listeners :refer [message-listener-proxy]])
+  (:require [lamina.trace :refer [defn-instrumented]])
   (:import [org.jivesoftware.smack
             XMPPConnection XMPPException ConnectionConfiguration
             PacketListener]
@@ -32,18 +34,18 @@
   (XMPPConnection. config))
 
 
-(defn connect [connection]
+(defn-instrumented connect [connection]
   (.connect connection))
 
 
-(defn login
+(defn-instrumented login
   [connection username password resource]
     (if resource
       (.login connection username password resource)
       (.login connection username password)))
 
 
-(defn open-connection
+(defn-instrumented open-connection
   [username password & {:keys [host port service-name proxy-info resource]}]
   (let [connection (->> [host port service-name]
                      (remove nil?)
@@ -58,6 +60,28 @@
     connection))
 
 
-(defn send-packet
+(defn-instrumented close-connection
+  [connection]
+  (.disconnect connection))
+
+
+(defn-instrumented send-packet
   [connection packet]
   (.sendPacket connection packet))
+
+
+(defn-instrumented send-message
+  [chat message]
+  (.sendMessage chat message))
+
+
+;; TODO convert chat responses to maps, convert maps to chat messages
+(defn-instrumented create-chat
+  ([connection destination]
+   (.createChat (.getChatManager connection) destination nil))
+  ([connection destination listener]
+   (.createChat (.getChatManager connection) destination (message-listener-proxy listener)))
+  ([connection destination thread listener]
+   (if thread
+     (.createChat (.getChatManager connection) destination thread (message-listener-proxy listener))
+     (create-chat connection destination listener))))

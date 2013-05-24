@@ -1,33 +1,60 @@
 (ns lamina-xmpp.demo
   (:gen-class)
+  (:require [clojure.pprint :refer [pprint]])
   (:require [lamina-xmpp.core :refer :all])
   (:require [lamina-xmpp.xmpp :as xmpp])
   (:require [lamina.core :refer :all])
-  (:import [org.jivesoftware.smack
-                        Chat ChatManager ConnectionConfiguration MessageListener
-                  SASLAuthentication XMPPConnection XMPPException PacketListener]
-               [org.jivesoftware.smack.packet
-                            Message Presence Presence$Type Message$Type]))
+  (:require [lamina.trace :refer [with-instrumentation]])
+  (:import [org.jivesoftware.smack SASLAuthentication]))
 
+
+(def message-sequence
+  (pipeline
+    (wait-stage 3000)
+    (fn [ch]
+      (println "Sending first IM")
+      (enqueue ch "My XMPP chat demo successfully sent an IM to you!")
+      ch)
+    (fn [ch]
+      (run-pipeline (read-channel ch)
+                    #(println "Got message: " %)
+                    (fn [_] ch)))
+    (fn [ch]
+      (println "Sending second IM" ch)
+      (enqueue ch "What do you think?")
+      ch)))
+
+
+(def presence-sequence
+  (pipeline
+    (fn [ch]
+      (println "Setting status to available")
+      (enqueue ch {:type :available :status "Test"})
+      ch)
+    (wait-stage 3000)
+    (fn [ch]
+      (println "Setting status to away")
+      (enqueue ch {:type :away :status "Hiding"})
+      ch)))
+
+
+;; TODO demo hangs at completion
 (defn -main
   "Demo entry point"
   [& [username password destination]]
   (SASLAuthentication/supportSASLMechanism "PLAIN" 0)
-  (let [connection (wait-for-result
-                     (xmpp-client
-                        username
-                        password
-                        :host "talk.google.com"
-                        :port 5222
-                        :service-name "gmail.com"))]
-    (push-xmpp-presence connection :available {:status "Test"})
-    (let [chat (.createChat (.getChatManager (get-xmpp-connection connection)) destination nil)]
-      (try
-        (.sendMessage chat "My XMPP chat demo successfully sent an IM to you!")
-        (catch XMPPException e
-          (println "sendMessage threw exception")
-          (throw e))))
-    (Thread/sleep 3000)
-    (push-xmpp-presence connection :away {:status "Hiding"})
-    (Thread/sleep 10000)
-    (.disconnect (get-xmpp-connection connection))))
+  (pprint (with-instrumentation 
+            (run-pipeline (xmpp-client
+                            username
+                            password
+                            :host "talk.google.com"
+                            :port 5222
+                            :service-name "gmail.com")
+                          (fn [client]
+                            (run-pipeline (merge-results
+                                            (run-pipeline (xmpp-presence client) presence-sequence)
+                                            (run-pipeline (xmpp-conversation client destination) message-sequence))
+                                          (fn [_] client))
+                            (wait-stage 3000)
+                            (fn [client]
+                              (xmpp/close-connection (get-xmpp-connection client))))))))

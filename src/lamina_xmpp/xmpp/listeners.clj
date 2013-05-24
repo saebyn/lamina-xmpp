@@ -1,6 +1,13 @@
 (ns lamina-xmpp.xmpp.listeners
-  (:import [org.jivesoftware.smack PacketListener]
+  (:import [org.jivesoftware.smack PacketListener MessageListener]
            [org.jivesoftware.smack.filter PacketFilter]))
+
+
+(defn message-listener-proxy
+  [processor]
+  (proxy [MessageListener] []
+    (processMessage [chat message]
+      (processor chat message))))
 
 
 (defn- packet-listener-proxy
