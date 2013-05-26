@@ -1,7 +1,8 @@
 (ns lamina-xmpp.core
   (:require [lamina.executor :refer [task]])
-  (:require [lamina.core :refer [channel-pair run-pipeline enqueue close
-                                 receive-all success-result]])
+  (:require [lamina.core :refer [channel-pair pipeline run-pipeline enqueue
+                                 close receive-all success-result error
+                                 complete]])
   (:require [lamina-xmpp.xmpp :as xmpp]
             [lamina-xmpp.xmpp.presence :as presence]
             [lamina-xmpp.xmpp.listeners :as listeners]))
@@ -23,8 +24,8 @@
   (let [[client server] (channel-pair)]
     ; Process messages from client on server channel, pass through to client
     (receive-all server (fn [presence-message]
-                      (xmpp/send-packet (get-xmpp-connection xmpp-client)
-                                        (presence/map->presence presence-message))))
+                          (xmpp/send-packet (get-xmpp-connection xmpp-client)
+                                            (presence/map->presence presence-message))))
     ; Listen for messages from xmpp-client, pass through to server channel
     (listeners/packet-listener xmpp-client
                                (fn [packet]
@@ -46,8 +47,10 @@
                 (fn [chat message]
                   (enqueue server message)))]
      ; Process messages from client on server channel, pass through to xmpp-client
-     (receive-all server (fn [message]
-                       (xmpp/send-message chat message)))
+     (receive-all server (pipeline
+                           {:error-handler (fn [ex]
+                                             (error (.emitter client) (xmpp/get-error ex)))}
+                           (partial xmpp/send-message chat)))
      (success-result client)))
   ([xmpp-client destination]
    (xmpp-conversation xmpp-client destination nil)))

@@ -1,7 +1,25 @@
 (ns lamina-xmpp.xmpp-test
   (:use midje.sweet)
+  (:import [org.jivesoftware.smack XMPPException])
   (:require [lamina-xmpp.xmpp :refer :all]
             [lamina-xmpp.xmpp.listeners :refer :all]))
+
+
+(fact "Throws an exception if login fails"
+  (open-connection ..username.. ..password.. :host ..host.. :port ..port.. :proxy-info ..proxy..) => (throws XMPPException)
+  (provided
+    (build-configuration ..proxy.. ..host.. ..port..) => ..configuration..
+    (build-connection ..configuration..) => ..connection..
+    (connect ..connection..) => nil
+    (login ..connection.. ..username.. ..password.. nil) =throws=> (XMPPException.)))
+
+
+(fact "Throws an exception if connect fails"
+  (open-connection ..username.. ..password.. :host ..host.. :port ..port.. :proxy-info ..proxy..) => (throws XMPPException)
+  (provided
+    (build-configuration ..proxy.. ..host.. ..port..) => ..configuration..
+    (build-connection ..configuration..) => ..connection..
+    (connect ..connection..) =throws=> (XMPPException.)))
 
 
 (fact "Opens a connection"
@@ -9,8 +27,8 @@
   (provided
     (build-configuration ..proxy.. ..host.. ..port..) => ..configuration..
     (build-connection ..configuration..) => ..connection..
-    (connect ..connection..) => nil
-    (login ..connection.. ..username.. ..password.. nil) => nil))
+    (connect ..connection..) => nil :times 1
+    (login ..connection.. ..username.. ..password.. nil) => nil :times 1))
 
 
 (fact "Hooks up packet listener"

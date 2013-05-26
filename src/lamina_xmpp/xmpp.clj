@@ -29,6 +29,7 @@
       (ConnectionConfiguration. service-name))))
 
 
+;; TODO add support for the callback that allows for client SSL certs
 (defn build-connection
   [config]
   (XMPPConnection. config))
@@ -85,3 +86,9 @@
    (if thread
      (.createChat (.getChatManager connection) destination thread (message-listener-proxy listener))
      (create-chat connection destination listener))))
+
+
+(defn get-error [error]
+  (condp instance? error
+    XMPPException :xmpp-exception
+    :unknown-error))
