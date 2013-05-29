@@ -1,15 +1,9 @@
 (ns lamina-xmpp.xmpp
   (:require [lamina-xmpp.xmpp.listeners :refer [message-listener-proxy]])
+  (:require [lamina-xmpp.xmpp.message :refer [map->message message->map]])
   (:require [lamina.trace :refer [defn-instrumented]])
   (:import [org.jivesoftware.smack
-            XMPPConnection XMPPException ConnectionConfiguration
-            PacketListener]
-           [org.jivesoftware.smack.filter PacketFilter PacketTypeFilter]
-           [org.jivesoftware.smack.packet Message]))
-
-
-(defn message-filter []
-  (PacketTypeFilter. Message))
+            XMPPConnection XMPPException ConnectionConfiguration]))
 
 
 (defn build-configuration
@@ -73,19 +67,19 @@
 
 (defn-instrumented send-message
   [chat message]
-  (.sendMessage chat message))
+  (.sendMessage chat (map->message message)))
 
 
-;; TODO convert chat responses to maps, convert maps to chat messages
 (defn-instrumented create-chat
   ([connection destination]
-   (.createChat (.getChatManager connection) destination nil))
+   (create-chat connection destination nil nil))
   ([connection destination listener]
-   (.createChat (.getChatManager connection) destination (message-listener-proxy listener)))
+   (create-chat connection destination nil listener))
   ([connection destination thread listener]
-   (if thread
-     (.createChat (.getChatManager connection) destination thread (message-listener-proxy listener))
-     (create-chat connection destination listener))))
+   (let [listener (message-listener-proxy (fn [chat message] (listener chat (message->map message))))]
+     (if thread
+       (.createChat (.getChatManager connection) destination thread listener)
+       (.createChat (.getChatManager connection) destination listener)))))
 
 
 (defn get-error [error]
